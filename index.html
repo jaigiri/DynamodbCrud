@@ -91,6 +91,7 @@
         const input = document.createElement('input');
         input.type = "text";
         input.value = name;
+        input.style.float = "left";
         li.appendChild(input);
 
         const button = document.createElement('button');
@@ -100,6 +101,7 @@
         }
         button.classList.add("btn");
         button.classList.add("btn-danger");
+        button.style.float = "right";
         li.appendChild(button)
 
         const button1 = document.createElement('button');
@@ -112,6 +114,7 @@
         }
         button1.classList.add("btn");
         button1.classList.add("btn-primary");
+        button1.style.float = "right";
         li.appendChild(button1)
     }
 
@@ -120,6 +123,7 @@
     }
 
     function closeSearch() {
+        $("#search").val("");
         loadNames("")
     }
 
