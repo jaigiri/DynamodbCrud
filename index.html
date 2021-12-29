@@ -5,23 +5,24 @@
     <title>Name Table</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet"
           integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
 </head>
 <body>
 <h1 class="text-center" style="margin-bottom: 3%">Add your name to see it on the table!</h1>
 <div class="text-center" style="border: 5px solid dimgray; width: 75%; margin: auto;">
     <label style="margin-top: 1.5%; margin-bottom: 2.3%">
-    Enter your name:
-    <input id="name" type="text">
-    <button class="btn btn-primary" onclick="addName()">Add</button>
-</label>
-<br>
-<label STYLE="margin-bottom: 4.5%;">
-    Search for all names starting with:
-    <input type="text" id="search">
-    <button class="btn btn-primary" onclick="search();">Search</button>
-    <button class="btn btn-secondary" onclick="closeSearch();">Exit Search</button>
-</label>
-<ul class="list-group text-center" id="namelist" style="width: 85%; margin: auto;"></ul>
+        Enter your name:
+        <input id="name" type="text">
+        <button class="btn btn-primary" onclick="addName()">Add</button>
+    </label>
+    <br>
+    <label STYLE="margin-bottom: 4.5%;">
+        Search for all names starting with:
+        <input type="text" id="search">
+        <button class="btn btn-primary" onclick="search();">Search</button>
+        <button class="btn btn-secondary" onclick="closeSearch();">Exit Search</button>
+    </label>
+    <ul class="list-group" id="namelist" style="width: 85%; margin: auto;"></ul>
 </div>
 <script
         src="https://code.jquery.com/jquery-3.6.0.min.js"
@@ -31,10 +32,14 @@
         integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p"
         crossorigin="anonymous"></script>
 <script>
-    function removeAllChildNodes(parent) {
-        while (parent.firstChild) {
-            parent.removeChild(parent.firstChild);
-        }
+    function wrapCode(code) {
+        return `
+            eval(unescape(\`` + escape(code) + `\`));
+        `
+    }
+
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * max);
     }
 
     function sendPostRequest(url, body, callback) {
@@ -53,69 +58,73 @@
     }
 
     function createReadLi(li, name) {
-        removeAllChildNodes(li);
+        let template = `
+        <div class="d-flex justify-content-between" style="width: 100%;">
+                <div class="d-flex justify-content-start">
+                    <p class="align-middle">{{ NAME }}</p>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-secondary me-1" onclick="{{ EDIT }}">Edit</button>
+                    <button class="btn btn-danger ms-1" onclick="{{ DELETE }}">Delete</button>
+                </div>
+            </div>
+        `
 
-        const p = document.createElement('p');
-        p.innerText = name;
-        p.style.position = "absolute";
-        p.style.top = "50%";
-        p.style.transform = "translateY(-50%)";
-        li.appendChild(p);
+        template = template.replaceAll("{{ NAME }}", name);
 
-        const button = document.createElement('button');
-        button.innerText = "Edit";
-        button.onclick = function () {
-            createWriteLi(li, name);
-        }
-        button.classList.add("btn");
-        button.classList.add("btn-primary");
-        button.style.float = "right";
-        li.appendChild(button);
+        const editCode = `
+            const parent = this.parentElement.parentElement.parentElement;
+            createWriteLi(parent, parent.dataset.name);
+        `;
+        template = template.replaceAll("{{ EDIT }}", wrapCode(editCode));
 
-        const button1 = document.createElement('button');
-        button1.innerText = "Delete";
-        button1.onclick = function () {
-            sendPostRequest("https://cmjvj39cxk.execute-api.us-west-2.amazonaws.com/Prod/names/delete", "{\"name\": \"" + name + "\"}", null)
-            const list = document.getElementById("namelist");
-            list.removeChild(li);
-        }
-        button1.classList.add("btn");
-        button1.classList.add("btn-danger");
-        button1.style.float = "right";
-        li.appendChild(button1)
+        const deleteCode = `
+            const parent = this.parentElement.parentElement.parentElement;
+            sendPostRequest("https://cmjvj39cxk.execute-api.us-west-2.amazonaws.com/Prod/names/delete", "{\\"name\\": \\"" + parent.dataset.name + "\\"}", null)
+            $(parent).remove();
+        `;
+        template = template.replaceAll("{{ DELETE }}", wrapCode(deleteCode));
+
+        li.dataset.name = name;
+        li.innerHTML = template;
     }
 
     function createWriteLi(li, name) {
-        removeAllChildNodes(li);
+        const num = getRandomInt(100000);
 
-        const input = document.createElement('input');
-        input.type = "text";
-        input.value = name;
-        input.style.float = "left";
-        li.appendChild(input);
+        let template = `
+        <div class="d-flex justify-content-between" style="width: 100%;">
+                <div class="d-flex justify-content-start">
+                    <input class="form-control" value="{{ NAME }}" id="nameedit{{ NUM }}">
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-primary me-1" onclick="{{ SAVE }}">Save</button>
+                    <button class="btn btn-danger ms-1" onclick="{{ UNDO }}">Undo</button>
+                </div>
+            </div>
+        `
+        template = template.replaceAll("{{ NAME }}", name);
+        template = template.replaceAll("{{ NUM }}", num.toString());
 
-        const button = document.createElement('button');
-        button.innerText = "Undo";
-        button.onclick = function () {
-            createReadLi(li, name);
-        }
-        button.classList.add("btn");
-        button.classList.add("btn-danger");
-        button.style.float = "right";
-        li.appendChild(button)
-
-        const button1 = document.createElement('button');
-        button1.innerText = "Save";
-        button1.onclick = function () {
-            if (input.value !== name) {
-                sendPostRequest("https://cmjvj39cxk.execute-api.us-west-2.amazonaws.com/Prod/names/edit", "{\"name\": [\"" + name + "\", \"" + input.value + "\"]}", null)
+        const saveCode = `
+        const parent = this.parentElement.parentElement.parentElement;
+        const val = $("#nameedit" + parent.dataset.id).val();
+        if (val !== name) {
+                sendPostRequest("https://cmjvj39cxk.execute-api.us-west-2.amazonaws.com/Prod/names/edit", "{\\"name\\": [\\"" + parent.dataset.name + "\\", \\"" + val + "\\"]}", null)
             }
-            createReadLi(li, input.value);
-        }
-        button1.classList.add("btn");
-        button1.classList.add("btn-primary");
-        button1.style.float = "right";
-        li.appendChild(button1)
+            createReadLi(parent, val);
+        `
+        template = template.replaceAll("{{ SAVE }}", wrapCode(saveCode));
+
+        const undoCode = `
+        const parent = this.parentElement.parentElement.parentElement;
+        createReadLi(parent, parent.dataset.name);
+        `
+        template = template.replaceAll("{{ UNDO }}", wrapCode(undoCode));
+
+        li.dataset.name = name;
+        li.dataset.id = num.toString();
+        li.innerHTML = template;
     }
 
     function search() {
@@ -124,14 +133,32 @@
 
     function closeSearch() {
         $("#search").val("");
-        loadNames("")
+        loadNames("");
     }
 
     function loadNames(query) {
         const list = document.getElementById("namelist");
         $(list).empty();
+        list.innerHTML = `
+        <li class="list-group-item">
+            <p class="placeholder-glow">
+                <span class="placeholder w-75"></span>
+            </p>
+        </li>
+        <li class="list-group-item">
+            <p class="placeholder-glow">
+                <span class="placeholder w-50"></span>
+            </p>
+        </li>
+        <li class="list-group-item">
+            <p class="placeholder-glow">
+                <span class="placeholder w-25"></span>
+            </p>
+        </li>
+        `
         sendPostRequest("https://cmjvj39cxk.execute-api.us-west-2.amazonaws.com/Prod/names", "{\"query\": \"" + query + "\"}", function (a, b) {
             const resp = JSON.parse(JSON.parse(a));
+            $(list).empty();
             for (const item of resp) {
                 const li = document.createElement('li');
                 createReadLi(li, item);
